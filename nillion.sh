@@ -11,7 +11,7 @@ echo -e "${YELLOW}Nillion 노드 설치를 시작합니다.${NC}"
 
 # 패키지 업데이트 및 필요한 패키지 설치
 echo -e "${YELLOW}패키지 업데이트 및 필요한 패키지 설치 중...${NC}"
-sudo apt update && sudo apt install -y ufw
+sudo apt update && sudo apt install -y ufw && sudo apt install -y net-tools
 
 # 도커 설치
 dockerSetup(){
@@ -78,7 +78,7 @@ read -p "6.구동이후 지갑주소를 입력하시고 트잭이 올라가는�
 docker run -v ./nillion/verifier:/var/tmp nillion/verifier:v1.0.1 verify --rpc-endpoint "https://testnet-nillion-rpc.lavenderfive.com"
 
 # 현재 사용 중인 포트 확인
-used_ports=$(netstat -tuln | awk '{print $4}' | grep -o '[0-9]*$' | sort -u)
+used_ports=$(ss -tuln | awk '{print $4}' | grep -o '[0-9]*$' | sort -u)
 
 # 각 포트에 대해 ufw allow 실행
 for port in $used_ports; do
