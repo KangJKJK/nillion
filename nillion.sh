@@ -57,7 +57,7 @@ docker run -v "$(pwd)/nillion/verifier:/var/tmp" nillion/verifier:v1.0.1 initial
 
 # 디렉토리 이동
 cd nillion/verifier
-echo -e "${YELLOW}표시되는 내용 중 어카운트ID와 프라이빗키를 저장해두세요.${NC}"
+echo -e "${YELLOW}표시되는 내용들을 모두 저장해두세요.${NC}"
 
 # 자격 증명 파일 출력
 if [ -f /root/nillion/verifier/credentials.json ]; then
@@ -71,7 +71,7 @@ read -p "1.위에서 확인한 월렛을 케플러월렛에서 불러오세요 (
 read -p "2.해당 사이트에서 faucet을 받아주세요:https://faucet.testnet.nillion.com (엔터): "
 read -p "3.해당 사이트에서 지갑을 연동하시고 Verifier를 선택하세요:https://verifier.nillion.com (엔터): "
 read -p "4.Initialising the verifie 탭으로 이동해서 verifier 인증을 해주세요 (엔터): "
-read -p "5.어카운트 ID와 퍼블릭키를 입력하고 베리파이어로 등록해주세요 (엔터): "
+read -p "5.어카운트 ID(지갑주소)와 퍼블릭키를 입력하고 베리파이어로 등록해주세요 (엔터): "
 read -p "6.구동이후 지갑주소를 입력하시고 트잭이 올라가는지 확인하세요: https://testnet.nillion.explorers.guru/ (엔터): "
 
 # 노드 구동
