@@ -53,14 +53,18 @@ if [ -d "nillion" ]; then
     echo -e "${YELLOW}/root/nillion 디렉토리를 삭제했습니다.${NC}"
 fi
 mkdir -p nillion/verifier
-docker run -v .\nillion\verifier:/var/tmp nillion/verifier:v1.0.1 initialise
+docker run -v "$(pwd)/nillion/verifier:/var/tmp" nillion/verifier:v1.0.1 initialise
 
 # 디렉토리 이동
 cd nillion/verifier
 echo -e "${YELLOW}표시되는 내용 중 어카운트ID와 프라이빗키를 저장해두세요.${NC}"
 
 # 자격 증명 파일 출력
-cat /root/nillion/verifier/credentials.json
+if [ -f /root/nillion/verifier/credentials.json ]; then
+    cat /root/nillion/verifier/credentials.json
+else
+    echo "자격 증명 파일이 존재하지 않습니다."
+fi
 
 # 사용자 안내
 read -p "1.위에서 확인한 월렛을 케플러월렛에서 불러오세요 (엔터): "
