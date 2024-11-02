@@ -1,136 +1,89 @@
 #!/bin/bash
 
-# 색깔 변수 정의
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-NC='\033[0m' # No Color
+# 컬러 정의
+export RED='\033[0;31m'
+export YELLOW='\033[1;33m'
+export GREEN='\033[0;32m'
+export NC='\033[0m'  # No Color
 
-# 빈 줄 출력
-echo ""
+# 안내 메시지
+echo -e "${YELLOW}Nillion 노드 설치를 시작합니다.${NC}"
 
-echo -e "${GREEN}Nillion 노드 설치를 시작합니다.${NC}"
+# 패키지 업데이트 및 필요한 패키지 설치
+echo -e "${YELLOW}패키지 업데이트 및 필요한 패키지 설치 중...${NC}"
+sudo apt update && sudo apt install -y ufw
 
-# 사용자에게 명령어 결과를 강제로 보여주는 함수
-req() {
-  echo -e "${YELLOW}$1${NC}"
-  shift
-  "$@"
-  echo -e "${YELLOW}결과를 확인한 후 엔터를 눌러 계속 진행하세요.${NC}"
-  read -r
+# 도커 설치
+dockerSetup(){
+    if ! command -v docker &> /dev/null; then
+        echo "Docker 설치 중..."
+
+        for pkg in docker.io docker-doc docker-compose podman-docker containerd runc; do
+            sudo apt-get remove -y $pkg
+        done
+
+        sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+        sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+        
+        sudo apt update -y && sudo apt install -y docker-ce
+        sudo systemctl start docker
+        sudo systemctl enable docker
+
+        echo "Docker Compose 설치 중..."
+
+        sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+
+        echo "Docker가 성공적으로 설치되었습니다."
+
+    else
+        echo "Docker가 이미 설치되어 있습니다."
+
+    fi
 }
 
-# Docker가 설치되어 있는지 확인
-if ! command -v docker &> /dev/null; then
-    echo ""
-    echo "Docker가 설치되지 않았습니다. Docker를 설치 중..."
-    
-    # Docker 설치 명령어
-    sudo apt update && sudo apt install -y curl && \
-    curl -fsSL https://get.docker.com -o get-docker.sh && \
-    sudo sh get-docker.sh
+# 노드 설치
 
-    # Docker 그룹에 사용자 추가
-    sudo usermod -aG docker ${USER} && su - ${USER} -c "groups"
-else
-    echo ""
-    echo "Docker가 이미 설치되어 있습니다."
-fi
-
-# 'nillion' 디렉터리가 있는지 확인
+docker container run --rm hello-world
+docker pull nillion/verifier:v1.0.1
 if [ -d "nillion" ]; then
-    echo ""
-    echo "'nillion' 디렉터리가 발견되었습니다. 제거 중..."
-    sudo rm -r "nillion"
-else
-    echo ""
-    echo "'nillion' 디렉터리가 없습니다."
+    echo -e "${GREEN}/root/nillion 디렉토리가 이미 존재합니다. 삭제 중...${NC}"
+    rm -rf nillion  
+    echo -e "${YELLOW}/root/nillion 디렉토리를 삭제했습니다.${NC}"
 fi
+mkdir -p nillion/verifier
+docker run -v .\nillion\verifier:/var/tmp nillion/verifier:v1.0.1 initialise
 
-# 필요한 패키지 설치 (jq 및 bc)
-sudo apt update && sudo apt install -y jq bc
+# 디렉토리 이동
+cd nillion/verifier
+echo -e "${YELLOW}표시되는 내용 중 어카운트ID와 프라이빗키를 저장해두세요.${NC}"
 
-# 현재 실행 중인 'nillion' 컨테이너 중지 및 제거
-echo ""
-echo "'nillion' 이름을 가진 실행 중인 컨테이너를 중지하고 제거 중..."
-sudo docker ps | grep nillion | awk '{print $1}' | xargs -r docker stop
-sudo docker ps -a | grep nillion | awk '{print $1}' | xargs -r docker rm
+# 자격 증명 파일 출력
+cat /root/nillion/verifier/credentials.json
 
-# nillion Docker 이미지를 최신 버전으로 Pull
-echo ""
-echo "NILLION Docker 이미지를 Pull 중..."
-sudo docker pull nillion/retailtoken-accuser:latest
+# 사용자 안내
+read -p "1.위에서 확인한 월렛을 케플러월렛에서 불러오세요 (엔터): "
+read -p "2.해당 사이트에서 faucet을 받아주세요:https://faucet.testnet.nillion.com (엔터): "
+read -p "3.해당 사이트에서 지갑을 연동하시고 Verifier를 선택하세요:https://verifier.nillion.com (엔터): "
+read -p "4.Initialising the verifie 탭으로 이동해서 verifier 인증을 해주세요 (엔터): "
+read -p "5.어카운트 ID와 퍼블릭키를 입력하고 베리파이어로 등록해주세요 (엔터): "
+read -p "6.구동이후 지갑주소를 입력하시고 트잭이 올라가는지 확인하세요: https://testnet.nillion.explorers.guru/ (엔터): "
 
-# Docker 컨테이너를 실행하여 초기화 작업 수행
-echo ""
-echo "디렉터리를 생성하고 초기화를 위해 Docker 컨테이너 실행 중..."
-mkdir -p nillion/accuser && \
-sudo docker run -v "$(pwd)/nillion/accuser:/var/tmp" nillion/retailtoken-accuser:v1.0.1 initialise
+# 노드 구동
+docker run -v ./nillion/verifier:/var/tmp nillion/verifier:v1.0.1 verify --rpc-endpoint "https://testnet-nillion-rpc.lavenderfive.com"
 
-# credentials.json 파일 경로
-SECRET_FILE=~/nillion/accuser/credentials.json
+# 현재 사용 중인 포트 확인
+used_ports=$(netstat -tuln | awk '{print $4}' | grep -o '[0-9]*$' | sort -u)
 
-# credentials.json 파일이 존재하는지 확인
-if [ -f "$SECRET_FILE" ]; then
-    ADDRESS=$(jq -r '.address' "$SECRET_FILE")
-    echo ""
-    echo "이 주소로 Nillion 테스트넷 faucet을 요청하십시오: $ADDRESS"
-    echo "(https://faucet.testnet.nillion.com)"
-    echo ""
+# 각 포트에 대해 ufw allow 실행
+for port in $used_ports; do
+    echo -e "${GREEN}포트 ${port}을(를) 허용합니다.${NC}"
+    sudo ufw allow $port/tcp
+done
 
-    # faucet 요청 여부 확인
-    read -p "faucet을 요청하셨습니까? (계속하려면 y/Y 입력): " FAUCET_REQUESTED1
-    if [[ "$FAUCET_REQUESTED1" =~ ^[yY]$ ]]; then
-        echo ""
-        echo "이제 https://verifier.nillion.com/verifier를 방문하세요."
-        echo "새 Keplr 지갑을 연결하십시오."
-        echo "Nillion 주소로 faucet을 요청하십시오: https://faucet.testnet.nillion.com"
-        echo ""
+echo -e "${GREEN}모든 사용 중인 포트가 허용되었습니다.${NC}"
 
-        # Keplr 지갑에 faucet을 요청했는지 확인
-        read -p "Keplr 지갑에 faucet을 요청하셨습니까? (계속하려면 y/Y 입력): " FAUCET_REQUESTED2
-        if [[ "$FAUCET_REQUESTED2" =~ ^[yY]$ ]]; then
-            # Keplr 지갑의 Nillion 주소 입력 요청
-            read -p "Keplr 지갑의 Nillion 주소를 입력하십시오: " KEPLR
-            echo ""
-            echo "다음 정보를 https://verifier.nillion.com/verifier 사이트에 입력하십시오."
-            echo "주소: $ADDRESS"
-            echo "공개 키: $(jq -r '.pub_key' "$SECRET_FILE")"
-            echo ""
 
-            # 정보를 제출했는지 확인
-            read -p "정보를 제출하셨습니까? (계속하려면 y/Y 입력): " address_submitted
-            if [[ "$address_submitted" =~ ^[yY]$ ]]; then
-                echo ""
-                echo "이 개인 키를 안전한 곳에 저장하십시오: $(jq -r '.priv_key' "$SECRET_FILE")"
-                echo ""
-
-                # 개인 키를 안전한 곳에 저장했는지 확인
-                read -p "개인 키를 안전한 곳에 저장하셨습니까? (계속하려면 y/Y 입력): " private_key_saved
-                if [[ "$private_key_saved" =~ ^[yY]$ ]]; then
-                    echo ""
-                    echo "accuse 명령으로 Docker 컨테이너를 실행 중..."
-                    sudo docker run -v "$(pwd)/nillion/accuser:/var/tmp" nillion/retailtoken-accuser:v1.0.1 accuse --rpc-endpoint "https://nillion-testnet.rpc.nodex.one" --block-start "$(curl -s "https://testnet-nillion-api.lavenderfive.com/cosmos/tx/v1beta1/txs?query=message.sender='$KEPLR'&pagination.limit=20&pagination.offset=0" | jq -r '[.tx_responses[] | select(.tx.body.memo == "AccusationRegistrationMessage")] | sort_by(.height | tonumber) | .[-1].height | tonumber - 5' | bc)"
-                else
-                    echo ""
-                    echo "개인 키를 안전한 곳에 저장한 후 다시 시도하십시오."
-                fi
-            else
-                echo ""
-                echo "제출을 완료한 후 다시 시도하십시오."
-            fi
-        else
-            echo ""
-            echo "Keplr 지갑에 faucet을 요청한 후 다시 시도하십시오."
-        fi
-    else
-        echo ""
-        echo "faucet을 요청한 후 다시 시도하십시오."
-    fi
-else
-    echo ""
-    echo "credentials.json 파일이 없습니다. 초기화 과정이 성공적으로 완료되었는지 확인하십시오."
-fi
-
-echo -e "${GREEN}모든 작업이 완료되었습니다. 컨트롤+A+D로 스크린을 종료해주세요.${NC}"
+echo -e "${YELLOW}모든 작업이 완료되었습니다. 컨트롤+A+D로 스크린을 종료해주세요.${NC}"
 echo -e "${GREEN}스크립트 작성자: https://t.me/kjkresearch${NC}"
