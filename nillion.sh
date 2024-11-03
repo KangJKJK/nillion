@@ -12,6 +12,12 @@ echo -e "${YELLOW}Nillion 노드 설치를 시작합니다.${NC}"
 # 패키지 업데이트 및 필요한 패키지 설치
 echo -e "${YELLOW}패키지 업데이트 및 필요한 패키지 설치 중...${NC}"
 sudo apt update && sudo apt install -y ufw && sudo apt install -y net-tools
+echo -e "${YELLOW}Node.js LTS 버전을 설치하고 설정 중...${NC}"
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # nvm을 로드합니다
+nvm install --lts
+nvm use --lts
 
 # 도커 설치
 dockerSetup(){
