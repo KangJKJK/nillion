@@ -75,6 +75,7 @@ read -p "5.어카운트 ID(지갑주소)와 퍼블릭키를 입력하고 베리�
 read -p "6.구동이후 지갑주소를 입력하시고 트잭이 올라가는지 확인하세요: https://testnet.nillion.explorers.guru/ (엔터): "
 
 # 노드 구동
+cd $HOME
 docker run -v ./nillion/verifier:/var/tmp nillion/verifier:v1.0.1 verify --rpc-endpoint "https://testnet-nillion-rpc.lavenderfive.com"
 
 # 현재 사용 중인 포트 확인
