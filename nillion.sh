@@ -43,18 +43,29 @@ dockerSetup(){
     fi
 }
 
+# 디렉토리 설정
+if [ -d "nillion" ]; then
+    echo -e "${GREEN}/root/nillion 디렉토리가 이미 존재합니다. 삭제 중...${NC}"
+    rm -rf root/nillion  
+    echo -e "${YELLOW}/root/nillion 디렉토리를 삭제했습니다.${NC}"  
+fi
+mkdir -p nillion/verifier
+
 # 노드 설치 함수
 install_node() {
     docker container run --rm hello-world
     docker pull nillion/verifier:v1.0.1
-    if [ -d "nillion" ]; then
-        echo -e "${GREEN}/root/nillion 디렉토리가 이미 존재합니다. 삭제 중...${NC}"
-        rm -rf nillion  
-        echo -e "${YELLOW}/root/nillion 디렉토리를 삭제했습니다.${NC}"
-    fi
 
-    # 노드 셋업
-    mkdir -p nillion/verifier
+    # 현재 사용 중인 포트 확인
+    used_ports=$(ss -tuln | awk '{print $4}' | grep -o '[0-9]*$' | sort -u)
+
+    # 각 포트에 대해 ufw allow 실행
+    for port in $used_ports; do
+        echo -e "${GREEN}포트 ${port}을(를) 허용합니다.${NC}"
+        sudo ufw allow $port/tcp
+    done
+
+    echo -e "${GREEN}모든 사용 중인 포트가 허용되었습니다.${NC}"
 
     # 디렉토리 이동
     cd $HOME
@@ -82,31 +93,60 @@ run_node() {
     docker run -v ./nillion/verifier:/var/tmp nillion/verifier:v1.0.1 verify --rpc-endpoint "https://testnet-nillion-rpc.lavenderfive.com"
 }
 
+# Verify 다시 진행 함수
+verify() {
+    echo -e "${YELLOW}베리파이중인 사이트에서 새로고침을 한 후 다시 Verify를 진행하세요: ${NC}"
+    read -p "VERIFIER REGISTERED라고 화면에 뜨면 엔터를 눌러서 다음단계를 진행해주세요: "
+    
+    # Verify 실행
+    docker run -v ./nillion/verifier:/var/tmp nillion/verifier:v1.0.1 verify --rpc-endpoint "https://testnet-nillion-rpc.lavenderfive.com"
+    
+    # 오류 확인
+    read -p "오류가 발생했습니까? (True/False): " error_occurred
+    if [ "$error_occurred" == "True" ]; then
+        echo -e "${YELLOW}오류가 발생했습니다. 다시 선택하세요:${NC}"
+        error_check  # 오류 확인 함수 호출
+    fi
+}
+
+# 오류 확인 함수
+error_check() {
+    echo -e "${YELLOW}오류유무에 따라 옵션을 선택하세요:${NC}"
+    echo "1. Verify 다시 진행"
+    echo "2. 재설치"
+    echo "3. 오류없음"  # 종료 옵션 추가
+    read -p "선택 (1, 2 또는 3): " option
+
+    if [ "$option" == "1" ]; then
+        echo -e "${YELLOW}Verify를 다시 진행합니다...${NC}"
+        verify  # Verify를 다시 진행하는 함수 호출
+    elif [ "$option" == "2" ]; then
+        echo -e "${YELLOW}노드 설치를 다시 시작합니다...${NC}"
+        docker rmi -f nillion/verifier:v1.0.1
+        read -p "위에 표시된 정보 중 container A is using~ 에서 A를 복사해서 붙여넣으세요 :" container
+        docker stop $container
+        docker rm $container
+        docker rmi nillion/verifier:v1.0.1
+        rm -rf root/nillion  
+        install_node  # 노드 설치 함수 호출
+        run_node      # 노드 구동 함수 호출
+    elif [ "$option" == "3" ]; then
+        echo -e "${YELLOW}이곳에서 트랜잭션기록들을 볼 수 있습니다: https://testnet.nillion.explorers.guru/${NC}"
+        echo -e "${YELLOW}모든 작업이 완료되었습니다. 컨트롤+A+D로 스크린을 종료해주세요.${NC}"
+        echo -e "${GREEN}스크립트 작성자: https://t.me/kjkresearch${NC}"
+        exit 0  # 프로그램 종료
+    else
+        echo "잘못된 선택입니다. 1, 2 또는 3을 입력하세요."
+        error_check  # 잘못된 선택 시 다시 선택하도록 호출
+    fi
+}
+
+
 # 노드 설치
 install_node
 
 # 노드 구동
 run_node
 
-# 오류 확인
-read -p "오류가 발생했습니까? (True/False): " error_occurred
-if [ "$error_occurred" == "True" ]; then
-    echo -e "${YELLOW}노드 설치를 다시 시작합니다...${NC}"
-    install_node
-    run_node
-fi
-
-# 현재 사용 중인 포트 확인
-used_ports=$(ss -tuln | awk '{print $4}' | grep -o '[0-9]*$' | sort -u)
-
-# 각 포트에 대해 ufw allow 실행
-for port in $used_ports; do
-    echo -e "${GREEN}포트 ${port}을(를) 허용합니다.${NC}"
-    sudo ufw allow $port/tcp
-done
-
-echo -e "${GREEN}모든 사용 중인 포트가 허용되었습니다.${NC}"
-
-echo -e "${YELLOW}이곳에서 트랜잭션기록들을 볼 수 있습니다: https://testnet.nillion.explorers.guru/${NC}"
-echo -e "${YELLOW}모든 작업이 완료되었습니다. 컨트롤+A+D로 스크린을 종료해주세요.${NC}"
-echo -e "${GREEN}스크립트 작성자: https://t.me/kjkresearch${NC}"
+# 오류 확인 함수
+error_check
