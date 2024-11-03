@@ -43,17 +43,18 @@ dockerSetup(){
     fi
 }
 
-# 디렉토리 설정
-if [ -d "nillion" ]; then
-    echo -e "${GREEN}/root/nillion 디렉토리가 이미 존재합니다. 삭제 중...${NC}"
-    rm -rf /root/nillion  
-    echo -e "${YELLOW}/root/nillion 디렉토리를 삭제했습니다.${NC}"  
-fi
-mkdir -p /root/nillion/verifier
-
 # 노드 설치 함수
 install_node() {
     docker container run --rm hello-world
+
+    # 디렉토리 설정
+    if [ -d "nillion" ]; then
+        echo -e "${GREEN}/root/nillion 디렉토리가 이미 존재합니다. 삭제 중...${NC}"
+        rm -rf /root/nillion  
+        echo -e "${YELLOW}/root/nillion 디렉토리를 삭제했습니다.${NC}"  
+    fi
+    mkdir -p /root/nillion/verifier
+
     docker pull nillion/verifier:v1.0.1
 
     # 현재 사용 중인 포트 확인
@@ -66,31 +67,92 @@ install_node() {
     done
 
     echo -e "${GREEN}모든 사용 중인 포트가 허용되었습니다.${NC}"
-
-    # 디렉토리 이동
     cd $HOME
-    docker run -v ./nillion/verifier:/var/tmp nillion/verifier:v1.0.1 initialise
-    echo -e "${YELLOW}아래에 표시되는 내용들을 모두 저장해두세요.${NC}"
 
-    # 자격 증명 파일 출력
-    if [ -f /root/nillion/verifier/credentials.json ]; then
-        cat /root/nillion/verifier/credentials.json
+    # 지갑 선택
+    read -p "새 지갑을 원하시면 '1', 기존 지갑을 사용하시려면 '2'를 입력하세요: " wallet_choice
+
+    generate_pub_key_address() {
+        show "공개 키와 주소를 생성하는 중입니다..." "progress"
+        node -e "
+    const { DirectSecp256k1Wallet } = require('@cosmjs/proto-signing');
+
+    async function getAddressAndPubKeyFromPrivateKey(privateKeyHex) {
+    const privateKeyBytes = Uint8Array.from(
+        privateKeyHex.match(/.{1,2}/g).map((byte) => parseInt(byte, 16))
+    );
+    const wallet = await DirectSecp256k1Wallet.fromKey(privateKeyBytes, 'nillion');
+    const [{ address, pubkey }] = await wallet.getAccounts();
+    console.log(address);
+    console.log(Buffer.from(pubkey).toString('hex'));
+    }
+
+    getAddressAndPubKeyFromPrivateKey('$private_key');
+    " > address_and_pubkey.txt
+
+        wallet_address=$(sed -n '1p' address_and_pubkey.txt)
+        pub_key=$(sed -n '2p' address_and_pubkey.txt)
+
+        show "주소: $wallet_address"
+        show "공개 키: $pub_key"
+        echo
+    }
+
+    if [[ "$wallet_choice" == "2" ]]; then
+        # 개인 키 입력 요청
+        read -p "개인 키를 입력하세요: " private_key
+        echo
+
+        npm install @cosmjs/proto-signing
+        generate_pub_key_address
+
+        cat <<EOF > nillion/verifier/credentials.json
+{
+  "priv_key": "$private_key",
+  "pub_key": "$pub_key",
+  "address": "$wallet_address"
+}
+EOF
+    rm address_and_pubkey.txt
+
+    elif [[ "$wallet_choice" == "1" ]]; then
+        show "새로운 검증자 노드를 생성하는 중입니다..." "progress"
+        docker run -v ./nillion/verifier:/var/tmp nillion/verifier:v1.0.1 initialise
+
+        echo
+        echo "이제 다음 링크를 방문하세요: https://verifier.nillion.com/verifier"
+        echo "새로운 Keplr 지갑을 연결하세요."
+        echo "nillion 주소로 faucet을 요청하세요: https://faucet.testnet.nillion.com"
+        echo
+
+        read -p "faucet을 요청하셨나요? (y/n): " faucet_requested
+        if [[ ! "$faucet_requested" =~ ^[yY]$ ]]; then
+            show "faucet을 요청하시고 다시 시도하세요." "error"
+            exit 1
+        fi
+
+        echo
+        echo "다음 정보를 웹사이트에 입력하세요: https://verifier.nillion.com/verifier"
+        read -p "해당 사이트에서 지갑을 연동하시고 Verifier를 선택하세요:https://verifier.nillion.com (엔터): "
+        echo -e "주소: ${GREEN}$(jq -r '.address' nillion/verifier/credentials.json)${NC}"
+        echo -e "공개 키: ${GREEN}$(jq -r '.pub_key' nillion/verifier/credentials.json)${NC}"
+        read -p "Set up for Linux를 선택하시고 Initialising the verifie 탭으로 이동해서 verifier 인증을 해주세요 (엔터): "
+        echo
+
+        read -p "웹사이트에 주소와 공개 키를 입력하셨나요? (y/n): " info_inputted
+        if [[ ! "$info_inputted" =~ ^[yY]$ ]]; then
+            show "정보를 입력하시고 다시 시도하세요." "error"
+            exit 1
+        fi
     else
-        echo "자격 증명 파일이 존재하지 않습니다."
+        show "잘못된 선택입니다. 1 또는 2를 선택하세요." "error"
     fi
 
-    # 사용자 안내
-    read -p "1.위에서 확인한 월렛을 케플러월렛에서 불러오세요 (엔터): "
-    read -p "2.해당 사이트에서 faucet을 받아주세요:https://faucet.testnet.nillion.com (엔터): "
-    read -p "3.해당 사이트에서 지갑을 연동하시고 Verifier를 선택하세요:https://verifier.nillion.com (엔터): "
-    read -p "4.Set up for Linux를 선택하시고 Initialising the verifie 탭으로 이동해서 verifier 인증을 해주세요 (엔터): "
-    read -p "5.어카운트 ID(지갑주소)와 퍼블릭키를 입력하고 베리파이어로 등록해주세요 (엔터): "
-    read -p "6.VERIFIER REGISTERED라고 화면에 뜨면 엔터를 눌러서 다음단계를 진행해주세요: "
-}
+    echo "노드를 시작합니다."
+    docker run -d --name nillion -v ./nillion/verifier:/var/tmp nillion/verifier:v1.0.1 verify --rpc-endpoint "https://nillion-testnet-rpc.polkachu.com"
 
-# 노드 구동 함수
-run_node() {
-    docker run -v ./nillion/verifier:/var/tmp nillion/verifier:v1.0.1 verify --rpc-endpoint "https://testnet-nillion-rpc.lavenderfive.com"
+    echo "로그를 표시합니다."
+    sudo docker logs nillion -fn 50
 }
 
 # Verify 다시 진행 함수
@@ -98,7 +160,7 @@ verify() {
     echo -e "${YELLOW}베리파이중인 사이트에서 새로고침을 한 후 다시 Verify를 진행하세요: ${NC}"
     read -p "VERIFIER REGISTERED라고 화면에 뜨면 엔터를 눌러서 다음단계를 진행해주세요: "
     
-    # Verify 실행
+    # 노드 실행
     docker run -v ./nillion/verifier:/var/tmp nillion/verifier:v1.0.1 verify --rpc-endpoint "https://testnet-nillion-rpc.lavenderfive.com"
     
     # 오류 확인
@@ -109,45 +171,42 @@ verify() {
     fi
 }
 
-# 오류 확인 함수
-error_check() {
-    echo -e "${YELLOW}오류유무에 따라 옵션을 선택하세요:${NC}"
-    echo "1. Verify 다시 진행"
-    echo "2. 재설치"
-    echo "3. 오류없음"  # 종료 옵션 추가
-    read -p "선택 (1, 2 또는 3): " option
-
-    if [ "$option" == "1" ]; then
-        echo -e "${YELLOW}Verify를 다시 진행합니다...${NC}"
-        verify  # Verify를 다시 진행하는 함수 호출
-    elif [ "$option" == "2" ]; then
-        echo -e "${YELLOW}노드 설치를 다시 시작합니다...${NC}"
-        docker rmi -f nillion/verifier:v1.0.1
-        echo -e "${YELLOW}Deleted가 나온다면 그냥 엔터를 눌러주세요.${NC}"
-        read -p "위에 표시된 정보 중 container A is using~ 에서 A를 복사해서 붙여넣으세요 :" container
-        docker stop $container
-        docker rm $container
-        docker rmi nillion/verifier:v1.0.1
-        rm -rf /root/nillion  
-        install_node  # 노드 설치 함수 호출
-        run_node      # 노드 구동 함수 호출
-    elif [ "$option" == "3" ]; then
-        echo -e "${YELLOW}이곳에서 트랜잭션기록들을 볼 수 있습니다: https://testnet.nillion.explorers.guru/${NC}"
-        echo -e "${YELLOW}모든 작업이 완료되었습니다. 컨트롤+A+D로 스크린을 종료해주세요.${NC}"
-        echo -e "${GREEN}스크립트 작성자: https://t.me/kjkresearch${NC}"
-        exit 0  # 프로그램 종료
+# 노드 삭제 함수
+delete_node() {
+    show "credentials.json을 nillion-backup.json으로 백업하는 중..." "progress"
+    if [[ -f nillion/verifier/credentials.json ]]; then
+        cp nillion/verifier/credentials.json nillion-backup.json
+        show "백업이 성공적으로 생성되었습니다."
     else
-        echo "잘못된 선택입니다. 1, 2 또는 3을 입력하세요."
-        error_check  # 잘못된 선택 시 다시 선택하도록 호출
+        show "백업할 credentials.json 파일이 없습니다." "error"
     fi
+
+    show "Nillion Docker 컨테이너를 중지하고 제거하는 중..." "progress"
+    sudo docker ps -a | grep nillion/verifier | awk '{print $1}' | xargs -r docker stop 2>/dev/null
+    sudo docker ps -a | grep nillion/verifier | awk '{print $1}' | xargs -r docker rm 2>/dev/null
+
+    show "검증자 노드를 삭제하는 중..." "progress"
+    rm -rf nillion/verifier
+    show "검증자 노드가 성공적으로 삭제되었습니다."
 }
 
+while true; do
 
-# 노드 설치
-install_node
-
-# 노드 구동
-run_node
-
-# 오류 확인 함수
-error_check
+    echo -e "${YELLOW}이곳에서 트랜잭션기록들을 볼 수 있습니다: https://testnet.nillion.explorers.guru/${NC}"
+    echo -e "${GREEN}스크립트 작성자: https://t.me/kjkresearch${NC}"
+    echo
+    echo "1. 노드 설치"
+    echo "2. Verify 다시 진행"
+    echo "3. 재설치"
+    echo
+    read -p "옵션을 선택하세요: " option
+    case $option in
+        1) 
+            dockerSetup  # dockerSetup 함수 호출
+            install_node  # install_node 함수 호출
+            ;;
+        2) verify ;;
+        3) delete_node ;;
+        *) show "Invalid option. Please try again." "error" ;;
+    esac
+done
