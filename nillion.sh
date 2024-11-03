@@ -74,6 +74,7 @@ install_node() {
     read -p "3.해당 사이트에서 지갑을 연동하시고 Verifier를 선택하세요:https://verifier.nillion.com (엔터): "
     read -p "4.Set up for Linux를 선택하시고 Initialising the verifie 탭으로 이동해서 verifier 인증을 해주세요 (엔터): "
     read -p "5.어카운트 ID(지갑주소)와 퍼블릭키를 입력하고 베리파이어로 등록해주세요 (엔터): "
+    read -p "6.VERIFIER REGISTERED라고 화면에 뜨면 엔터를 눌러서 다음단계를 진행해주세요: "
 }
 
 # 노드 구동 함수
