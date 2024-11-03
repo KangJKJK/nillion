@@ -46,10 +46,10 @@ dockerSetup(){
 # 디렉토리 설정
 if [ -d "nillion" ]; then
     echo -e "${GREEN}/root/nillion 디렉토리가 이미 존재합니다. 삭제 중...${NC}"
-    rm -rf root/nillion  
+    rm -rf /root/nillion  
     echo -e "${YELLOW}/root/nillion 디렉토리를 삭제했습니다.${NC}"  
 fi
-mkdir -p nillion/verifier
+mkdir -p /root/nillion/verifier
 
 # 노드 설치 함수
 install_node() {
@@ -128,7 +128,7 @@ error_check() {
         docker stop $container
         docker rm $container
         docker rmi nillion/verifier:v1.0.1
-        rm -rf root/nillion  
+        rm -rf /root/nillion  
         install_node  # 노드 설치 함수 호출
         run_node      # 노드 구동 함수 호출
     elif [ "$option" == "3" ]; then
