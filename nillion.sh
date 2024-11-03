@@ -179,21 +179,21 @@ verify() {
 
 # 노드 삭제 함수
 delete_node() {
-    show "credentials.json을 nillion-backup.json으로 백업하는 중..." "progress"
+    echo "credentials.json을 nillion-backup.json으로 백업하는 중..."
     if [[ -f nillion/verifier/credentials.json ]]; then
         cp nillion/verifier/credentials.json nillion-backup.json
-        show "백업이 성공적으로 생성되었습니다."
+        echo "백업이 성공적으로 생성되었습니다."
     else
-        show "백업할 credentials.json 파일이 없습니다." "error"
+        echo "백업할 credentials.json 파일이 없습니다."
     fi
 
-    show "Nillion Docker 컨테이너를 중지하고 제거하는 중..." "progress"
+    echo "Nillion Docker 컨테이너를 중지하고 제거하는 중..."
     sudo docker ps -a | grep nillion/verifier | awk '{print $1}' | xargs -r docker stop 2>/dev/null
     sudo docker ps -a | grep nillion/verifier | awk '{print $1}' | xargs -r docker rm 2>/dev/null
 
-    show "검증자 노드를 삭제하는 중..." "progress"
+    echo "검증자 노드를 삭제하는 중..."
     rm -rf nillion/verifier
-    show "검증자 노드가 성공적으로 삭제되었습니다."
+    echo "검증자 노드가 성공적으로 삭제되었습니다."
 }
 
 while true; do
@@ -203,7 +203,8 @@ while true; do
     echo
     echo "1. 노드 설치"
     echo "2. Verify 다시 진행"
-    echo "3. 재설치"
+    echo "3. 노드 삭제"
+    echo "4. 종료"  # 종료 옵션 추가
     echo
     read -p "옵션을 선택하세요: " option
     case $option in
@@ -213,6 +214,10 @@ while true; do
             ;;
         2) verify ;;
         3) delete_node ;;
-        *) show "Invalid option. Please try again." "error" ;;
+        4) 
+            echo "스크립트를 종료합니다."
+            exit 0  # 스크립트 종료
+            ;;
+        *) echo "잘못된 선택입니다. 다시 시도하세요." ;;
     esac
 done
