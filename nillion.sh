@@ -123,6 +123,7 @@ error_check() {
     elif [ "$option" == "2" ]; then
         echo -e "${YELLOW}노드 설치를 다시 시작합니다...${NC}"
         docker rmi -f nillion/verifier:v1.0.1
+        echo -e "${YELLOW}Deleted가 나온다면 그냥 엔터를 눌러주세요.${NC}"
         read -p "위에 표시된 정보 중 container A is using~ 에서 A를 복사해서 붙여넣으세요 :" container
         docker stop $container
         docker rm $container
