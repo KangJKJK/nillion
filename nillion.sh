@@ -57,7 +57,7 @@ install_node() {
     mkdir -p nillion/verifier
 
     # 디렉토리 이동
-    cd nillion/verifier
+    cd $HOME
     docker run -v ./nillion/verifier:/var/tmp nillion/verifier:v1.0.1 initialise
     echo -e "${YELLOW}아래에 표시되는 내용들을 모두 저장해두세요.${NC}"
 
