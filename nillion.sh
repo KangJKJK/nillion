@@ -119,10 +119,11 @@ cat <<EOF > nillion/verifier/credentials.json
 }
 EOF
         echo
-        echo "다음 정보를 웹사이트에 입력하세요: https://verifier.nillion.com/verifier"
-        read -p "해당 사이트에서 지갑을 연동하시고 Verifier를 선택하세요:https://verifier.nillion.com (엔터): "
         echo -e "주소: ${GREEN}$(jq -r '.address' nillion/verifier/credentials.json)${NC}"
         echo -e "공개 키: ${GREEN}$(jq -r '.pub_key' nillion/verifier/credentials.json)${NC}"
+        echo "nillion 주소로 faucet을 요청하세요: https://faucet.testnet.nillion.com"
+        echo "해당 사이트로 이동하세요: https://verifier.nillion.com/verifier"
+        read -p "해당 사이트에서 지갑을 연동하시고 Verifier를 선택하세요:https://verifier.nillion.com (엔터): "
         read -p "Set up for Linux를 선택하시고 Initialising the verifie 탭으로 이동해서 verifier 인증을 해주세요 (엔터): "
         echo
 
@@ -131,22 +132,11 @@ EOF
         docker run -v ./nillion/verifier:/var/tmp nillion/verifier:v1.0.1 initialise
 
         echo
-        echo "이제 다음 링크를 방문하세요: https://verifier.nillion.com/verifier"
-        echo "새로운 Keplr 지갑을 연결하세요."
-        echo "nillion 주소로 faucet을 요청하세요: https://faucet.testnet.nillion.com"
-        echo
-
-        read -p "faucet을 요청하셨나요? (y/n): " faucet_requested
-        if [[ ! "$faucet_requested" =~ ^[yY]$ ]]; then
-            echo "faucet을 요청하시고 다시 시도하세요."
-            exit 1
-        fi
-
-        echo
-        echo "다음 정보를 웹사이트에 입력하세요: https://verifier.nillion.com/verifier"
-        read -p "해당 사이트에서 지갑을 연동하시고 Verifier를 선택하세요:https://verifier.nillion.com (엔터): "
         echo -e "주소: ${GREEN}$(jq -r '.address' nillion/verifier/credentials.json)${NC}"
         echo -e "공개 키: ${GREEN}$(jq -r '.pub_key' nillion/verifier/credentials.json)${NC}"
+        echo "nillion 주소로 faucet을 요청하세요: https://faucet.testnet.nillion.com"
+        echo "해당 사이트로 이동하세요: https://verifier.nillion.com/verifier"
+        read -p "해당 사이트에서 지갑을 연동하시고 Verifier를 선택하세요:https://verifier.nillion.com (엔터): "
         read -p "Set up for Linux를 선택하시고 Initialising the verifie 탭으로 이동해서 verifier 인증을 해주세요 (엔터): "
         echo
 
