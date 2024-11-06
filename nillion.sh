@@ -155,7 +155,7 @@ EOF
     fi
 
     echo "노드를 시작합니다."
-    docker run -d --name nillion -v ./nillion/verifier:/var/tmp nillion/verifier:v1.0.1 verify --rpc-endpoint "https://nillion-testnet-rpc.polkachu.com"
+    docker run -d --name nillion -v ./nillion/verifier:/var/tmp nillion/verifier:v1.0.1 verify --rpc-endpoint "https://testnet-nillion-rpc.lavenderfive.com"
 
     echo "로그를 표시합니다."
     sudo docker logs nillion -fn 50
