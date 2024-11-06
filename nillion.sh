@@ -79,7 +79,7 @@ install_node() {
     read -p "새 지갑을 원하시면 '1', 기존 지갑을 사용하시려면 '2'를 입력하세요: " wallet_choice
 
     generate_pub_key_address() {
-        show "공개 키와 주소를 생성하는 중입니다..." "progress"
+        echo "공개 키와 주소를 생성하는 중입니다..."
         node -e "
     const { DirectSecp256k1Wallet } = require('@cosmjs/proto-signing');
 
@@ -99,8 +99,8 @@ install_node() {
         wallet_address=$(sed -n '1p' address_and_pubkey.txt)
         pub_key=$(sed -n '2p' address_and_pubkey.txt)
 
-        show "주소: $wallet_address"
-        show "공개 키: $pub_key"
+        echo "주소: $wallet_address"
+        echo "공개 키: $pub_key"
         echo
     }
 
@@ -111,18 +111,23 @@ install_node() {
 
         npm install @cosmjs/proto-signing
         generate_pub_key_address
-
-        cat <<EOF > nillion/verifier/credentials.json
+cat <<EOF > nillion/verifier/credentials.json
 {
-  "priv_key": "$private_key",
-  "pub_key": "$pub_key",
-  "address": "$wallet_address"
+"priv_key": "$private_key",
+"pub_key": "$pub_key",
+"address": "$wallet_address"
 }
 EOF
-    rm address_and_pubkey.txt
+        echo
+        echo "다음 정보를 웹사이트에 입력하세요: https://verifier.nillion.com/verifier"
+        read -p "해당 사이트에서 지갑을 연동하시고 Verifier를 선택하세요:https://verifier.nillion.com (엔터): "
+        echo -e "주소: ${GREEN}$(jq -r '.address' nillion/verifier/credentials.json)${NC}"
+        echo -e "공개 키: ${GREEN}$(jq -r '.pub_key' nillion/verifier/credentials.json)${NC}"
+        read -p "Set up for Linux를 선택하시고 Initialising the verifie 탭으로 이동해서 verifier 인증을 해주세요 (엔터): "
+        echo
 
     elif [[ "$wallet_choice" == "1" ]]; then
-        show "새로운 검증자 노드를 생성하는 중입니다..." "progress"
+        echo "새로운 검증자 노드를 생성하는 중입니다..."
         docker run -v ./nillion/verifier:/var/tmp nillion/verifier:v1.0.1 initialise
 
         echo
@@ -133,7 +138,7 @@ EOF
 
         read -p "faucet을 요청하셨나요? (y/n): " faucet_requested
         if [[ ! "$faucet_requested" =~ ^[yY]$ ]]; then
-            show "faucet을 요청하시고 다시 시도하세요." "error"
+            echo "faucet을 요청하시고 다시 시도하세요."
             exit 1
         fi
 
@@ -147,11 +152,12 @@ EOF
 
         read -p "웹사이트에 주소와 공개 키를 입력하셨나요? (y/n): " info_inputted
         if [[ ! "$info_inputted" =~ ^[yY]$ ]]; then
-            show "정보를 입력하시고 다시 시도하세요." "error"
+            echo "정보를 입력하시고 다시 시도하세요."
             exit 1
         fi
     else
-        show "잘못된 선택입니다. 1 또는 2를 선택하세요." "error"
+        echo "잘못된 선택입니다. 1 또는 2를 선택하세요."
+        exit 1
     fi
 
     echo "노드를 시작합니다."
@@ -220,3 +226,4 @@ while true; do
         *) echo "잘못된 선택입니다. 다시 시도하세요." ;;
     esac
 done
+
