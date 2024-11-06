@@ -173,7 +173,6 @@ verify() {
     read -p "오류가 발생했습니까? (True/False): " error_occurred
     if [ "$error_occurred" == "True" ]; then
         echo -e "${YELLOW}오류가 발생했습니다. 다시 선택하세요:${NC}"
-        error_check  # 오류 확인 함수 호출
     fi
 }
 
